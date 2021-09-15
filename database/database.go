@@ -3,7 +3,7 @@ package database
 import (
 	"fmt"
 
-	"github.com/NominalTrajectory/nt-precision-rest-api/model"
+	"github.com/NominalTrajectory/nt-precision-rest-api/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -16,7 +16,7 @@ func InitializeDatabase(dbConnectionString string) {
 		panic(fmt.Sprintf("Failed to connect to database: %v", err))
 	}
 	// Migrate to schema
-	db.AutoMigrate(&model.Objective{})
+	db.AutoMigrate(&models.Objective{}, &models.User{})
 
 	DB = db
 }

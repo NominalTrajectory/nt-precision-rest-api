@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/auth"
 	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/home"
 	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/okr"
 
@@ -53,6 +54,9 @@ func setupRouter() *mux.Router {
 	/* ROUTES AND HANDLERS */
 	r.HandleFunc("/", home.Home)
 	r.HandleFunc("/objectives", okr.GetAllObjectives)
+
+	r.HandleFunc("/register", auth.Register).Methods("POST")
+	r.HandleFunc("/login", auth.Login).Methods("POST")
 
 	/*                     */
 
