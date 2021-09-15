@@ -1,43 +1,25 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"log"
-	"net/http"
+	"os"
 
-	"github.com/NominalTrajectory/nt-precision-rest-api/model"
-	"github.com/julienschmidt/httprouter"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/NominalTrajectory/nt-precision-rest-api/database"
+	"github.com/NominalTrajectory/nt-precision-rest-api/server"
 )
 
 var (
-	dbaddr = flag.String("dbaddr", "", "The address of the database")
+	DBConnectionString string = os.Getenv("DB_CONNECTION_STRING")
+	ListenAddress      string = os.Getenv("LISTEN_ADDRESS")
 )
 
 func main() {
-	flag.Parse()
-
-	db := setupDB(*dbaddr)
-
-	router := httprouter.New()
-
-	server := NewServer(db)
-	server.RegisterRouter(router)
-
-	log.Fatal(http.ListenAndServe(":5100", router))
-
-}
-
-func setupDB(dbAddress string) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(dbAddress))
+	log.Println("Connecting to the database...")
+	database.InitializeDatabase(DBConnectionString)
+	log.Printf("Starting Precision API at %v", ListenAddress)
+	server.InitializeServer(ListenAddress, DBConnectionString)
+	err := server.Server.ListenAndServe()
 	if err != nil {
-		panic(fmt.Sprintf("Failed to connect to database: %v", err))
+		log.Fatalf("Precision API failed to start: %v", err)
 	}
-
-	// Migrate to schema
-	db.AutoMigrate(&model.Objective{})
-
-	return db
 }
