@@ -8,6 +8,7 @@ import (
 	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/auth"
 	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/home"
 	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/okr"
+	"github.com/rs/cors"
 
 	"github.com/gorilla/mux"
 )
@@ -36,13 +37,33 @@ func InitializeServer(listenAddress string, dbConnectionString string) {
 		},
 	}
 
+	// TODO: Move cors setting to the config file and import as env vars
+	corsOptions := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:4200"},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodOptions,
+			http.MethodHead,
+		},
+		AllowedHeaders: []string{
+			"*",
+		},
+		AllowCredentials: true,
+	})
+
+	handler := corsOptions.Handler(router)
+
 	server := &http.Server{
 		Addr:         listenAddress,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 		TLSConfig:    tlsConfig,
-		Handler:      router,
+		Handler:      handler,
 	}
 
 	Server = server
@@ -57,6 +78,8 @@ func setupRouter() *mux.Router {
 
 	r.HandleFunc("/register", auth.Register).Methods("POST")
 	r.HandleFunc("/login", auth.Login).Methods("POST")
+	r.HandleFunc("/logout", auth.Logout).Methods("POST")
+	r.HandleFunc("/user", auth.User).Methods("GET")
 
 	/*                     */
 
