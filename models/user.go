@@ -15,7 +15,7 @@ type User struct {
 
 type Credentials struct {
 	Email string
-	Pwd   string
+	Pwd   string `json:"-" gorm:"not null"`
 }
 
 type UserProfile struct {

@@ -5,19 +5,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/auth"
-	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/home"
-	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/okr"
+	"github.com/NominalTrajectory/nt-precision-rest-api/router"
 	"github.com/rs/cors"
-
-	"github.com/gorilla/mux"
 )
 
 var Server *http.Server
 
 func InitializeServer(listenAddress string, dbConnectionString string) {
 
-	router := setupRouter()
+	router := router.New()
 
 	tlsConfig := &tls.Config{
 		PreferServerCipherSuites: true,
@@ -67,21 +63,4 @@ func InitializeServer(listenAddress string, dbConnectionString string) {
 	}
 
 	Server = server
-}
-
-func setupRouter() *mux.Router {
-	r := mux.NewRouter()
-
-	/* ROUTES AND HANDLERS */
-	r.HandleFunc("/", home.Home)
-	r.HandleFunc("/objectives", okr.GetAllObjectives)
-
-	r.HandleFunc("/register", auth.Register).Methods("POST")
-	r.HandleFunc("/login", auth.Login).Methods("POST")
-	r.HandleFunc("/logout", auth.Logout).Methods("POST")
-	r.HandleFunc("/user", auth.User).Methods("GET")
-
-	/*                     */
-
-	return r
 }
