@@ -69,5 +69,53 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSONResult(w, models.Token{Token: token})
+	authCookie := http.Cookie{
+		Name:     "jwt",
+		Value:    token,
+		Expires:  time.Now().Add(time.Hour * 24), // expires after 24 hours, move to a config file,
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &authCookie)
+	utils.WriteJSONResult(w, "Successfully logged in")
+}
+
+func Logout(w http.ResponseWriter, r *http.Request) {
+	expiredCookie := http.Cookie{
+		Name:     "jwt",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &expiredCookie)
+	utils.WriteJSONResult(w, "Logged out")
+}
+
+func User(w http.ResponseWriter, r *http.Request) {
+	authCookie, err := r.Cookie("jwt")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := jwt.ParseWithClaims(authCookie.Value, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(jwtSecretKey), nil
+	})
+
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	claims := token.Claims.(*jwt.StandardClaims)
+
+	var user models.User
+	if err := database.DB.Where("id = ?", claims.Issuer).First(&user).Error; err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	utils.WriteJSONResult(w, user)
+
 }
