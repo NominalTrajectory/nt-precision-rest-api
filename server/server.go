@@ -5,18 +5,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/auth"
-	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/home"
-	"github.com/NominalTrajectory/nt-precision-rest-api/handlers/okr"
-
-	"github.com/gorilla/mux"
+	"github.com/NominalTrajectory/nt-precision-rest-api/router"
+	"github.com/rs/cors"
 )
 
 var Server *http.Server
 
 func InitializeServer(listenAddress string, dbConnectionString string) {
 
-	router := setupRouter()
+	router := router.New()
 
 	tlsConfig := &tls.Config{
 		PreferServerCipherSuites: true,
@@ -36,29 +33,34 @@ func InitializeServer(listenAddress string, dbConnectionString string) {
 		},
 	}
 
+	// TODO: Move cors setting to the config file and import as env vars
+	corsOptions := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:4200"},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodOptions,
+			http.MethodHead,
+		},
+		AllowedHeaders: []string{
+			"*",
+		},
+		AllowCredentials: true,
+	})
+
+	handler := corsOptions.Handler(router)
+
 	server := &http.Server{
 		Addr:         listenAddress,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 		TLSConfig:    tlsConfig,
-		Handler:      router,
+		Handler:      handler,
 	}
 
 	Server = server
-}
-
-func setupRouter() *mux.Router {
-	r := mux.NewRouter()
-
-	/* ROUTES AND HANDLERS */
-	r.HandleFunc("/", home.Home)
-	r.HandleFunc("/objectives", okr.GetAllObjectives)
-
-	r.HandleFunc("/register", auth.Register).Methods("POST")
-	r.HandleFunc("/login", auth.Login).Methods("POST")
-
-	/*                     */
-
-	return r
 }

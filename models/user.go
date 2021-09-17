@@ -24,7 +24,3 @@ type UserProfile struct {
 	Greeting     string
 	ProfilePhoto string
 }
-
-type Token struct {
-	Token string `json:"token"`
-}

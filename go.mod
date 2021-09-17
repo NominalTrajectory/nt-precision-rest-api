@@ -17,6 +17,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
+	github.com/rs/cors v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gorm.io/driver/postgres v1.1.1 // indirect
