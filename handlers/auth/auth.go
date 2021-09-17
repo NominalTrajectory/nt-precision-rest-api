@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -24,8 +25,13 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pwd, _ := bcrypt.GenerateFromPassword([]byte(user.Pwd), 14)
-	user.Pwd = string(pwd)
+	hashedPassword, err := hashPassword(user.Password)
+	if err != nil {
+		http.Error(w, "Unable to register, please try again later", utils.ErrToStatusCode(err))
+		return
+	}
+
+	user.Password = hashedPassword
 
 	if err := database.DB.Create(&user).Error; err != nil {
 		http.Error(w, err.Error(), utils.ErrToStatusCode(err))
@@ -45,7 +51,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Where("email = ?", credentials.Email).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			http.Error(w, "This combination of email and password is incorrect", utils.ErrToStatusCode(err))
+			http.Error(w, "This combination of email and password is incorrect", http.StatusUnauthorized)
 			return
 		} else {
 			http.Error(w, err.Error(), utils.ErrToStatusCode(err))
@@ -53,8 +59,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Pwd), []byte(credentials.Pwd)); err != nil {
-		http.Error(w, "This combination of email and password is incorrect", utils.ErrToStatusCode(err))
+	hashedPassword := user.Password
+	passwordFromRequest := credentials.Password
+
+	if err := checkPassword(passwordFromRequest, hashedPassword); err != nil {
+		http.Error(w, "This combination of email and password is incorrect", http.StatusUnauthorized)
 		return
 	}
 
@@ -69,5 +78,65 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSONResult(w, models.Token{Token: token})
+	authCookie := http.Cookie{
+		Name:     "jwt",
+		Value:    token,
+		Expires:  time.Now().Add(time.Hour * 24), // expires after 24 hours, move to a config file,
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &authCookie)
+	utils.WriteJSONResult(w, "Successfully logged in")
+}
+
+func Logout(w http.ResponseWriter, r *http.Request) {
+	expiredCookie := http.Cookie{
+		Name:     "jwt",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &expiredCookie)
+	utils.WriteJSONResult(w, "Logged out")
+}
+
+func User(w http.ResponseWriter, r *http.Request) {
+	authCookie, err := r.Cookie("jwt")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := jwt.ParseWithClaims(authCookie.Value, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(jwtSecretKey), nil
+	})
+
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	claims := token.Claims.(*jwt.StandardClaims)
+
+	var user models.User
+	if err := database.DB.Where("id = ?", claims.Issuer).First(&user).Error; err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	utils.WriteJSONResult(w, user)
+}
+
+func hashPassword(password string) (string, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("Failed to hash password: %w", err)
+	}
+
+	return string(hashedPassword), nil
+}
+
+func checkPassword(password string, hashedPassword string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }

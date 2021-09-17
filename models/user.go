@@ -5,17 +5,17 @@ import "time"
 // TODO: Add validation
 
 type User struct {
-	ID        uint      `json:"id,omitempty"`
-	Name      string    `json:"name" gorm:"not null"`
-	Email     string    `json:"email" gorm:"unique"`
-	Pwd       string    `json:"pwd" gorm:"not null"`
+	ID        uint      `json:"id,omitempty" gorm:"primaryKey;not null"`
+	Name      string    `json:"name" gorm:"not null;"`
+	Email     string    `json:"email" gorm:"not null;unique"`
+	Password  string    `json:"password" gorm:"not null"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type Credentials struct {
-	Email string
-	Pwd   string `json:"pwd" gorm:"not null"`
+	Email    string
+	Password string `json:"password" gorm:"not null"`
 }
 
 type UserProfile struct {
